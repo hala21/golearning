@@ -6,9 +6,8 @@ import (
 )
 
 func main() {
-	wheats := iterdemo.GetNumberOfWheatItera(2)
-	print(wheats)
+	wheats := iterdemo.GetNumberOfWheatItera(63)
+	println(wheats)
 	remainder := remainder.Remainder
-	print(remainder)
-	print("hello")
+	println(remainder)
 }
