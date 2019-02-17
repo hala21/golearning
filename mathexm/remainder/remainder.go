@@ -1,6 +1,6 @@
 package remainder
 
-func Remainder() int8 {
-	rema := 7 + 5 - 590127%7
-	return int8(rema)
+func Remainder(n int) int {
+	rema := n + 5 - 590127%n
+	return rema
 }
