@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"golearning/mathexm/iterdemo"
+	"golearning/mathexm/mathinduction"
 	"golearning/mathexm/remainder"
 	"time"
 )
@@ -18,4 +19,8 @@ func main() {
 	t2 := time.Now().UnixNano()
 	fmt.Println(t2 - t1)
 	fmt.Println(detal)
+	var pro = &mathinduction.Result{}
+	var result = pro.Prove(3)
+	fmt.Println(result)
+
 }
