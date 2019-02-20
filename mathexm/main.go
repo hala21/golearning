@@ -20,7 +20,7 @@ func main() {
 	fmt.Println(t2 - t1)
 	fmt.Println(detal)
 	var pro = &mathinduction.Result{}
-	var result = pro.Prove(3)
+	var result = mathinduction.Prove(6, pro)
 	fmt.Println(result)
 
 }

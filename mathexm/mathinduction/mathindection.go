@@ -9,8 +9,7 @@ type Result struct {
 	wheelTotal int64
 }
 
-func (re *Result) Prove(k int) bool {
-	var provePreRe = &Result{re.wheel, re.wheelTotal}
+func Prove(k int, re *Result) bool {
 	// 证明n =1时命题是否成立
 	if k == 1 {
 		if int64(math.Pow(2, 1)-1) == 1 {
@@ -22,7 +21,9 @@ func (re *Result) Prove(k int) bool {
 		}
 	} else {
 		//如果n=k-1时命题成立，n=k时命题是否成立
-		var provePre bool = provePreRe.Prove(k - 1)
+		//var provePreRe = &Result{re.wheel, re.wheelTotal}
+
+		var provePre bool = Prove(k-1, re)
 		re.wheel *= 2
 		re.wheelTotal += re.wheel
 		var proveCurre bool = false
