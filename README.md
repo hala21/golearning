@@ -1,5 +1,4 @@
 # golearning
-new project
 
 记录golang学习的过程</br>
 #2018年学习了golang工程代码，grpc</br>
