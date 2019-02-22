@@ -28,5 +28,8 @@ func main() {
 	fmt.Println(result)
 	// 5. 递归 泛化数学归纳
 	mathinduction.GetRewardsRecursion1(20, []int{})
+	// 6. 分而治之，从归并排序到MapReduce，跑了才知道程序是这样运行的，递归是这样做的，学到了
+	mergesort := mathinduction.MergeSort([]int{243, 343, 6546, 32, 432, 42343, 423})
+	fmt.Println(mergesort)
 
 }
