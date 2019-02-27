@@ -16,11 +16,9 @@ func Permutate(Horses []string, result []string) {
 	}
 	// 修正slice delete element
 	for i := 0; i < len(Horses); i++ {
-		var newResult []string
-		copy(newResult, result)
+		var newResult = result
 		newResult = append(newResult, Horses[i])
-		var resetHorses []string
-		copy(resetHorses, Horses)
+		var resetHorses = Horses
 		resetHorses = append(resetHorses[:i], resetHorses[i+1:]...)
 		Permutate(resetHorses, newResult)
 	}
