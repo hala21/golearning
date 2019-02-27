@@ -35,6 +35,6 @@ func main() {
 	mergesort := mathinduction.MergeSort([]int{243, 343, 6546, 32, 432, 42343, 423})
 	fmt.Println(mergesort)
 	// 7.排列
-	permucombin.Permutate([]string{"t1", "t2", "t3"}, []string{})
+	permucombin.Permutate([]string{"t2", "t3", "t1"}, []string{})
 
 }
