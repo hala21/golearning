@@ -136,7 +136,7 @@ func main() {
 	}
 
 	// 连接ssh服务器
-	sftpClient, err := connect(username, password, hostIp, sshPort)
+	sftpClient, err = connect(username, password, hostIp, sshPort)
 	if err != nil {
 		logger.Fatal(err)
 	} else {
