@@ -162,10 +162,8 @@ func main() {
 			continue
 		}
 
-		logger.Printf("Filename is %s \r", fileInfo.Name())
-
 		remoteFilename := ""
-		if strings.Contains(*server, "ecm") {
+		if strings.Contains(*server, "ecm") || strings.Contains(*server, "wms") {
 			if fileInfo.ModTime().Format(layoutISO) == sunday {
 				remoteFilename = fileInfo.Name()
 			}
@@ -183,16 +181,13 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		logger.Println(remoteFilename)
 		remoteFileInfo := strings.Replace(filePath, remoteDir, "", -1)
-		logger.Println(remoteFileInfo)
 		remoteInfo := strings.Split(remoteFileInfo, "/")
-		logger.Println(remoteInfo)
 
 		if len(remoteInfo) > 1 {
 			localDirTmp := localDir + strings.Join(remoteInfo[0:len(remoteInfo)-1], "\\")
 			localDir := localDirTmp
-			logger.Println(localDir)
+
 			//dstFile, err := os.Create(path.Join(localDir, remoteFilename))
 
 			_, err = os.Stat(localDir)
@@ -201,6 +196,8 @@ func main() {
 					logger.Println("mkdir directory fault")
 				}
 			}
+
+			logger.Println(localDir + "\\" + remoteFilename)
 
 			dstFile, err := os.Create(localDir + "\\" + remoteFilename)
 			if err != nil {
@@ -215,6 +212,7 @@ func main() {
 			}
 		} else {
 
+			logger.Println(remoteFilename)
 			dstFile, err := os.Create(localDir + remoteFilename)
 			if err != nil {
 				logger.Fatal(err)
@@ -227,6 +225,5 @@ func main() {
 				dstFile.Close()
 			}
 		}
-
 	}
 }
