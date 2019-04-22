@@ -1,7 +1,18 @@
-syntax = "proto3";
+syntax = "proto3"; // 版本声明
 
-package v1;
+package v1; // 包声明
 
 import "google/protobuf/timestamp.proto";
+
+/*
+消息类似结构体、类等，服务是用来定义RPC通信的方法。
+Protocol Buffers 中数据类型分为标量类型和复合类型。类似，其它语言有基础类型和类等。复合类型，包括枚举和其他消息类型。
+double,float,int32,int64,uint32,uint64,sint32,sint64,fixed32,fixed64,sfixed32,sfixed64,bool,byte,string
+复合类型:
+枚举:定义枚举的时候，我们要保证第一个枚举值必须是0，枚举值不能重复，除非使用 option allow_alias = true 选项来开启别名
+
+字段编号:1到15范围内的字段编号需要一个字节进行编码，包括字段编号和字段类型;
+16到2047范围内的字段编号占用两个字节。因此，您应该为非常频繁出现的消息元素保留数字1到15。
+*/
 
 
