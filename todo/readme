@@ -1,0 +1,21 @@
+https://mp.weixin.qq.com/s/MSd-ZSLU50mouVprUqaC5A
+关于说明：
+第1部分是关于如何创建gRPC CRUD服务和客户端
+第2部分是关于如何将HTTP / REST端点添加到gRPC服务
+第3部分是关于如何向gRPC服务和HTTP / REST端点添加中间件（例如，日志记录 / 链路跟踪）
+第4部分将专门介绍如何添加Kubernetes部署配置并且进行运行状态检查以及如何构建项目并将其部署到Google Cloud
+
+API 先行
+这对我意味着什么？
+API定义必须是语言，协议，传输中立。
+API定义和API实现必须松散耦合。
+API版本控制。
+我需要排除手动工作以同步API定义，API实现和API文档。我需要API实现存根/骨架和API文档自动从API定义生成。
+
+Part 1：创建gRPC CRUD服务
+Step 1：创建API定义
+Step2：使用Go语言开发API实现
+Step3：编写API实现测试
+Step4：创建gRPC服务器
+Step5：创建gRPC客户端
+Step6：运行gRPC服务端和客户端
