@@ -20,7 +20,7 @@ import (
 
 type job_info struct {
 	serverIp string
-	jobNmae  string
+	jobName  string
 }
 
 var (
@@ -43,7 +43,6 @@ func SendToMail(user, password, host, to, subject, body, mailtype string) error 
 }
 
 func main() {
-
 	// 获取参数
 	server := flag.String("dbserver", "", "server_info")
 	flag.Parse()
@@ -92,15 +91,17 @@ func main() {
 	}
 	defer db.Close()
 
-	/*
-		sql_1 := `select b.server_ip,a.job_name from ecmdtasy_jobs a
-		inner join ecmdta.sy_job_server b on b.server_name=a.server_name
-		where a.next_run_date+6/1440 <sysdate and a.enabled=1 `
+	db.SetMaxOpenConns(100)
 
-		sql_2 := ` select c.server_ip,b.job_name from ecmdta.sy_job_queue a
-	        inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid
-	        inner join ecmdta.sy_job_server c on c.server_name=b.server_name
-	      where  ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30)`
+	/*
+			sql_1 := `select b.server_ip,a.job_name from ecmdtasy_jobs a
+			inner join ecmdta.sy_job_server b on b.server_name=a.server_name
+			where a.next_run_date+6/1440 <sysdate and a.enabled=1 `
+
+			sql_2 := ` select c.server_ip,b.job_name from ecmdta.sy_job_queue a
+		        inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid
+		        inner join ecmdta.sy_job_server c on c.server_name=b.server_name
+		      where  ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30)`
 	*/
 
 	sql_lock_check := `select s1.username ||' ' || s1.machine || 
