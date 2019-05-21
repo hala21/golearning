@@ -48,7 +48,7 @@ func main() {
 		logger.Fatal(err)
 	}
 	print(stockIP)
-	logger.Fatal(stockIP)
+	logger.Println(stockIP)
 
 	if stockIP == "" {
 		logger.Fatal("数据库未能查询到数据，仓库id: %s,%s", stockId, stockName)
