@@ -16,27 +16,26 @@ import (
 )
 
 var (
-	stockIP     string
-	stockId     int
-	stockIpFile string = "ip.txt"
+	stockIP     = ""
+	stockIpFile = "ip.txt"
 )
 
 func main() {
 
 	sec, logger := getParameter("warehouse", "warehouseid", "dyncip.ini", strings.Split(os.Args[1], "=")[1])
-	oracle_sid := sec["oracle_sid"]
+	oracleSid := sec["oracle_sid"]
 	stockId, _ := strconv.Atoi(sec["stock_id"])
 	stockName := sec["stock_name"]
-	ssh_server := sec["ssh_server"]
-	ssh_username := sec["ssh_username"]
-	ssh_password := sec["ssh_password"]
-	ssh_port, _ := strconv.Atoi(sec["ssh_port"])
+	sshServer := sec["ssh_server"]
+	sshUsername := sec["ssh_username"]
+	sshPassword := sec["ssh_password"]
+	sshPort, _ := strconv.Atoi(sec["ssh_port"])
 
 	ctxt, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// 打开数据库连接
-	db, err := sql.Open("goracle", oracle_sid)
+	db, err := sql.Open("goracle", oracleSid)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -80,13 +79,13 @@ func main() {
 	// 一致不一致的情况都需要把现有IP写入文件
 	if len(result) == 0 {
 		//检测防火墙配置
-		sshClient, err := sshConn(ssh_username, ssh_password, ssh_server, ssh_port)
+		sshClient, err := sshConn(sshServer, sshUsername, sshPassword, sshPort)
 		if err != nil {
-			logger.Fatal("不能连接到设备：%s", ssh_server)
+			logger.Fatal("不能连接到设备：%s", sshServer)
 		}
 		session, err := sshClient.NewSession()
 		if err != nil {
-			logger.Fatal("不能创建session: %s", ssh_server)
+			logger.Fatal("不能创建session: %s", sshServer)
 		}
 		defer session.Close()
 
@@ -150,19 +149,22 @@ func main() {
 			}
 
 			//写入IP到文件
-			ioutil.WriteFile(stockIpFile, []byte(stockIP), 0777)
+			err := ioutil.WriteFile(stockIpFile, []byte(stockIP), 0777)
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
 
 	} else {
 		//  判断数据库和文件IP是否一致，不一致就修改防火墙设置，再修改文件内容
 		if stockIP != fileIP {
-			sshClient, err := sshConn(ssh_username, ssh_password, ssh_server, ssh_port)
+			sshClient, err := sshConn(sshServer, sshUsername, sshPassword, sshPort)
 			if err != nil {
-				logger.Fatal("不能连接到设备：%s", ssh_server)
+				logger.Fatal("不能连接到设备：%s", sshServer)
 			}
 			session, err := sshClient.NewSession()
 			if err != nil {
-				logger.Fatal("不能创建session: %s", ssh_server)
+				logger.Fatal("不能创建session: %s", sshServer)
 			}
 			defer session.Close()
 

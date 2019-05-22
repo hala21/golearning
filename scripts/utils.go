@@ -6,9 +6,11 @@ import (
 	"github.com/Unknwon/goconfig"
 	"golang.org/x/crypto/ssh"
 	"log"
+	"net/smtp"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -54,7 +56,7 @@ func getParameter(parString string, parUsage string, logLocal string, filename s
 
 }
 
-func sshConn(user, password, host string, port int) (*ssh.Client, error) {
+func sshConn(host, user, password string, port int) (*ssh.Client, error) {
 	var (
 		auth         []ssh.AuthMethod
 		addr         string
@@ -81,4 +83,34 @@ func sshConn(user, password, host string, port int) (*ssh.Client, error) {
 	}
 
 	return sshClient, nil
+}
+
+func SendToMail(to, subject, body, mailtype string) error {
+	conf, err := goconfig.LoadConfigFile("utils.init")
+	sec, err := conf.GetSection("")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	host := sec["smtp_server"]
+	user := sec["smtp_user"]
+	password := sec["smtp_password"]
+	hp := strings.Split(host, ":")
+	auth := smtp.PlainAuth("", user, password, hp[0])
+	var contentType string
+	if mailtype == "html" {
+		contentType = "Content-Type: text/" + mailtype + "; charset=UTF-8"
+	} else {
+		contentType = "Content-Type: text/plain" + "; charset=UTF-8"
+	}
+	msg := []byte("To: " + to + "\r\nFrom: " + user + "\r\nSubject: " + subject + " \r\n" + contentType + "\r\n\r\n" + body)
+	send_to := strings.Split(to, ";")
+	err = smtp.SendMail(host, auth, user, send_to, msg)
+	return err
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
