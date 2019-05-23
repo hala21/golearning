@@ -226,6 +226,27 @@ func main() {
 			if err != nil {
 				logger.Fatal(err)
 			}
+			// 更新数据库oracle TCP白名单
+			oracleWhilelist := `insert into DBCTRL.TRUSTED_IPS 
+				select distinct IPADDRESS, sysdate  from dbctrl.user_access_log_his 
+				where IPADDRESS is not null and logon_time > trunc(sysdate)
+                and ipaddress not in (select sourceip from DBCTRL.TRUSTED_IPS);`
+			stmt, err := db.PrepareContext(ctxt, oracleWhilelist)
+			checkErr(err)
+			_, err = stmt.ExecContext(ctxt)
+			checkErr(err)
+			// 删除老的IP记录
+			oracleWhilelistRecord := `DELETE DBCTRL.TRUSTED_IPS where sourceip = :1 `
+			stmtDel, err := db.PrepareContext(ctxt, oracleWhilelistRecord)
+			checkErr(err)
+			_, err = stmtDel.ExecContext(ctxt)
+			// 删除Linux TCP 监控
+
+			sessionDb, err := sshClient.NewSession()
+			checkErr(err)
+			cmd := "cd /usr/local/scripts && sed -i `s/" + fileIP + "/" + stockIP + "/g` trustip && echo > excepip.txt"
+			err = sessionDb.Run(cmd)
+			checkErr(err)
 		}
 	}
 

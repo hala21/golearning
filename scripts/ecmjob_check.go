@@ -40,16 +40,15 @@ func main() {
 
 	dbOracle.SetMaxOpenConns(100)
 
-	/*
-			sql_1 := `select b.server_ip,a.job_name from ecmdta.sy_jobs a
+	sql_1 := `select b.server_ip,a.job_name from ecmdta.sy_jobs a
 			inner join ecmdta.sy_job_server b on b.server_name=a.server_name
 			where a.next_run_date+6/1440 <sysdate and a.enabled=1 `
 
-			sql_2 := ` select c.server_ip,b.job_name,count(a.job_queue_ukid) from ecmdta.sy_job_queue a
-		        inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid
-		        inner join ecmdta.sy_job_server c on c.server_name=b.server_name
-		      where  ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30)`
-	*/
+	sql_2 := ` select c.server_ip,b.job_name  from sy_job_queue a 
+     inner join sy_jobs b on b.job_ukid=a.job_ukid
+     inner join sy_job_server c on c.server_name=b.server_name
+     where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30) and c.start_job=1-- and b.mobile_list is not null
+     group by c.server_ip,b.job_name;`
 
 	sql_lock_check := `select s1.username ||' ' || s1.machine || 
     ' ( SID=' || s1.sid ||' serial#='||s1.serial#||  ' )  is blocking ' || s2.username ||' '|| s2.machine || ' ( SID=' || s2.sid || ' ) ' AS blocking_status 
@@ -61,12 +60,12 @@ func main() {
 	and s.sid = :1 order by t.piece `
 
 	// 获取服务器地址，分两种情况，一：服务延迟太多，二：服务预期运行时间比现在晚
-	sql_1_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
-	sql_2_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
+	//sql_1_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
+	//sql_2_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
 
 	var theData []jobInfo
 	var serverIp, jobName string = "", ""
-	rows_1, err := dbOracle.Query(sql_1_test)
+	rows_1, err := dbOracle.Query(sql_1)
 	if err != nil {
 		fmt.Println("Error running query")
 		fmt.Println(err)
@@ -79,7 +78,7 @@ func main() {
 		theData = append(theData, jobInfo{serverIp, jobName})
 	}
 
-	rows_2, err := dbOracle.Query(sql_2_test)
+	rows_2, err := dbOracle.Query(sql_2)
 	if err != nil {
 		fmt.Println("Error running query")
 		fmt.Println(err)
@@ -121,22 +120,18 @@ func main() {
 		timeNow := time.Now()
 
 		for _, ip := range serverIps {
-			var lastRebootTime string
 			rows, err := dbMysql.QueryContext(ctxt, "select jobip,jobname,reboottime from reboot_record where jobip = ? order by reboottime limit 1 ", ip)
 			checkErr(err)
 			for rows.Next() {
-				var jobip, jobname, reboottime string
-				err := rows.Scan(&jobip, &jobname, &reboottime)
+				var jobIp, jobName, reTime string
+				err := rows.Scan(&jobIp, &jobName, &reTime)
 				checkErr(err)
-				rebootTime, err := time.Parse("2006-01-02 15:04:05", reboottime)
+				rebootTime, err := time.Parse("2006-01-02 15:04:05", reTime)
 				checkErr(err)
 				if timeNow.Sub(rebootTime) < 10 {
 					//callPhone()
 				}
 
-			}
-			if len(lastRebootTime) > 0 {
-				time.Now()
 			}
 
 		}
