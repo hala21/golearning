@@ -1,11 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/Unknwon/goconfig"
 	"golang.org/x/crypto/ssh"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/smtp"
 	"os"
 	"os/exec"
@@ -113,4 +116,70 @@ func checkErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// 无人值守时间，非工作时间
+func standbyUnattendedTime() bool {
+
+	type holiday struct {
+		Code string `json:"code"`
+		Data int    `json:"data"`
+	}
+	//服务来自http://api.goseek.cn/
+	//1、接口地址：http://api.goseek.cn/Tools/holiday?date=数字日期，支持https协议。
+	//2、返回数据：正常工作日对应结果为 0, 法定节假日对应结果为 1, 节假日调休补班对应的结果为 2，休息日对应结果为 3
+	now := time.Now()
+	today := now.Format("20160102")
+	resp, err := http.Get("http://api.goseek.cn/Tools/holiday?date=" + today)
+	defer resp.Body.Close()
+	result, err := ioutil.ReadAll(resp.Body)
+	var nonWorkday holiday
+	err = json.Unmarshal(result, &nonWorkday)
+	checkErr(err)
+	resultHoliday := nonWorkday.Data
+
+	// 计算工作日的，非工作时间
+	if resultHoliday == 0 || resultHoliday == 2 {
+		hour, minute, _ := now.Clock()
+		// 8点之前，17点之后
+		if hour <= 8 || hour >= 17 {
+			// 8点半之前
+			if hour == 8 {
+				if minute < 30 {
+					return true
+				} else {
+					return false
+				}
+			}
+			// 17点半之后
+			if hour == 17 {
+				if minute > 30 {
+					return true
+				} else {
+					return false
+				}
+			}
+
+		} else {
+			// 工作时间返回false
+			return false
+		}
+	}
+
+	// 假日和周末
+	return true
+}
+
+func callPhone(phoneNum string, tpl_id int) {
+	url := "http://yuyin2.market.alicloudapi.com/dx/voice_notice"
+	config, err := goconfig.LoadConfigFile("utils.ini")
+	checkErr(err)
+	sec, err := config.GetSection("")
+	checkErr(err)
+
+	//parameterStr := ""
+	//phoneNum := phoneNum
+	//
+	//http.Post(url)
+
 }
