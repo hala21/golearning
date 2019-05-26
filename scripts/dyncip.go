@@ -10,19 +10,21 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 var (
-	stockIP     = ""
 	stockIpFile = "ip.txt"
+	stockIP     = ""
 )
 
 func main() {
 
-	sec, logger := getParameter("warehouse", "warehouseid", "dyncip.ini", strings.Split(os.Args[1], "=")[1])
+	sec := GetParameter("warehouse", "warehouseid", "dyncip.ini")
 	oracleSid := sec["oracle_sid"]
 	stockId, _ := strconv.Atoi(sec["stock_id"])
 	stockName := sec["stock_name"]
@@ -31,13 +33,30 @@ func main() {
 	sshPassword := sec["ssh_password"]
 	sshPort, _ := strconv.Atoi(sec["ssh_port"])
 
-	ctxt, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	//日志文件
+	var layoutISO = "2006-01-02"
+	filename := "dyncip_" + strings.Split(os.Args[1], "=")[1]
+	// 保存7天以内的日志文件
+	sysType := runtime.GOOS
+	if sysType == "linux" {
+		exec.Command("find ./logs - name oracle_lock_release_*.log -ctime +14 |xargs rm -f ")
+	}
+
+	logfileName := filename + "_" + time.Now().Format(layoutISO) + ".log"
+	f, err := os.OpenFile("logs/"+logfileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	logger := log.New(f, "", log.LstdFlags)
+
+	ctxt, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
 	// 打开数据库连接
 	db, err := sql.Open("goracle", oracleSid)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
 		return
 	}
 	defer db.Close()
@@ -46,7 +65,6 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	print(stockIP)
 	logger.Println(stockIP)
 
 	if stockIP == "" {
@@ -54,7 +72,7 @@ func main() {
 		return
 	}
 
-	f, err := os.Open(stockIpFile)
+	f, err = os.Open(stockIpFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			file, err := os.Create(stockIpFile)
@@ -129,14 +147,14 @@ func main() {
 					logger.Fatal(err)
 				}
 
-				comands := []string{
+				commands := []string{
 					"configure",
 					"set security zones security-zone untrust address-book address xiyanghzc " + stockIP + "/32",
 					"commit and-quit",
 					"exit",
 				}
 
-				for _, cmd := range comands {
+				for _, cmd := range commands {
 					_, err = fmt.Fprintf(stdin, "%s \n", cmd)
 					if err != nil {
 						logger.Fatal(err)
@@ -198,14 +216,14 @@ func main() {
 				logger.Fatal(err)
 			}
 
-			comands := []string{
+			commands := []string{
 				"configure",
 				"set security zones security-zone untrust address-book address xiyanghzc " + fileIP + "/32",
 				"commit and-quit",
 				"exit",
 			}
 
-			for _, cmd := range comands {
+			for _, cmd := range commands {
 				_, err = fmt.Fprintf(stdin, "%s \n", cmd)
 				if err != nil {
 					logger.Fatal(err)
@@ -232,21 +250,34 @@ func main() {
 				where IPADDRESS is not null and logon_time > trunc(sysdate)
                 and ipaddress not in (select sourceip from DBCTRL.TRUSTED_IPS);`
 			stmt, err := db.PrepareContext(ctxt, oracleWhilelist)
-			checkErr(err)
+			if err != nil {
+				logger.Fatal(err)
+			}
 			_, err = stmt.ExecContext(ctxt)
-			checkErr(err)
+			if err != nil {
+				logger.Fatal(err)
+			}
 			// 删除老的IP记录
 			oracleWhilelistRecord := `DELETE DBCTRL.TRUSTED_IPS where sourceip = :1 `
 			stmtDel, err := db.PrepareContext(ctxt, oracleWhilelistRecord)
-			checkErr(err)
-			_, err = stmtDel.ExecContext(ctxt)
+			if err != nil {
+				logger.Fatal(err)
+			}
+			_, err = stmtDel.ExecContext(ctxt, fileIP)
+			if err != nil {
+				logger.Fatal(err)
+			}
 			// 删除Linux TCP 监控
 
 			sessionDb, err := sshClient.NewSession()
-			checkErr(err)
-			cmd := "cd /usr/local/scripts && sed -i `s/" + fileIP + "/" + stockIP + "/g` trustip && echo > excepip.txt"
+			if err != nil {
+				logger.Fatal(err)
+			}
+			cmd := "cd /usr/local/scripts && sed -i `s/" + fileIP + "//g` trustip && echo " + stockIP + " >> trustip && echo > excepip.txt"
 			err = sessionDb.Run(cmd)
-			checkErr(err)
+			if err != nil {
+				logger.Fatal(err)
+			}
 		}
 	}
 
