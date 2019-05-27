@@ -68,9 +68,10 @@ func main() {
 
 	var messages []string
 	for rowsLock.Next() {
-		err := rowsLock.Scan(&messages)
+		message := ""
+		err := rowsLock.Scan(&message)
 		checkErr(err)
-		messages = append(messages)
+		messages = append(messages, message)
 	}
 
 	// 没有lock 就返回，结束运行
@@ -82,7 +83,7 @@ func main() {
 	logRec.Println(messages)
 
 	// 测试语句
-	messages = []string{"ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )", "ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )"}
+	// messages = []string{"ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )", "ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )"}
 
 	// jobsSidOrigin为了获取锁语句的sql文本；jobsServerOrigin 目的是去重启tomcat；sidSerialOrigin目的是killsql语句
 	var jobsServerOrigin, sidSerialOrigin []string
@@ -119,14 +120,23 @@ func main() {
 	for _, sqlSid := range sidSerials {
 		sid := strings.Split(sqlSid, ",")[0]
 		lockSqlText := ""
-		err := dbOracle.QueryRowContext(ctxt, sql_lock_sqltext, sid).Scan(&lockSqlText)
+		rows, err := dbOracle.QueryContext(ctxt, sql_lock_sqltext, sid)
+
 		if err != nil {
 			logRec.Printf("查询lock SQL失败： %v", err)
 			fmt.Printf("查询lock SQL失败： %v", err)
 		}
+		if rows.Next() {
+			err := rows.Scan(&lockSqlText)
+			if err != nil {
+				logRec.Printf("读取lock SQL失败： %v", err)
+				fmt.Printf("读取lock SQL失败： %v", err)
+			}
+			lockSqlTexts = append(lockSqlTexts, lockSqlText)
+		}
+
 		//暂时写入日志文件
 		logRec.Println(sid + lockSqlText)
-		lockSqlTexts = append(lockSqlTexts, lockSqlText)
 	}
 	fmt.Println(lockSqlTexts)
 
@@ -144,8 +154,8 @@ func main() {
 
 	// 执行重启tomcat脚本
 	for _, server := range jobServers {
-		cmdString := "ssh -p " + sshPort + " " + server + " sh /root/restart.sh "
-		cmd := exec.CommandContext(ctxt, cmdString)
+		//cmdString := "ssh -p " + sshPort + " " + server + " sh /root/restart.sh "
+		cmd := exec.CommandContext(ctxt, "ssh", "-p", sshPort, server, "sh", "/root/restart.sh")
 		err := cmd.Start()
 		logRec.Println(err)
 		err = cmd.Wait()

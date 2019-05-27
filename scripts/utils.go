@@ -89,7 +89,7 @@ func sshConn(host, user, password string, port int) (*ssh.Client, error) {
 }
 
 func SendToMail(to, subject, body, mailType string) error {
-	conf, err := goconfig.LoadConfigFile("utils.init")
+	conf, err := goconfig.LoadConfigFile("utils.ini")
 	sec, err := conf.GetSection("")
 	if err != nil {
 		log.Fatal(err)
