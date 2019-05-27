@@ -171,22 +171,29 @@ func standbyUnattendedTime() bool {
 	return true
 }
 
-/*
-func callPhone(phoneNum string, tplId int) {
+func callPhone(param string, phoneNum string, tplId string) {
 
-	const paramStr string =
-		"param=%s" +
-		"phone=%s" +
+	var paramStr = "param=%s" +
+		"&phone=%s" +
 		"&tpl_id=%s"
 
 	url := "http://yuyin2.market.alicloudapi.com/dx/voice_notice"
 	config, err := goconfig.LoadConfigFile("utils.ini")
 	checkErr(err)
-	//sec, err := config.GetSection("")
+	sec, err := config.GetSection("")
 	checkErr(err)
-    //appCode := sec["appCode"]
+	appCode := sec["AppCode"]
+	req, err := http.NewRequest("POST", url, strings.NewReader(fmt.Sprintf(paramStr, param, phoneNum, tplId)))
+	checkErr(err)
+	req.Header.Add("Authorization", "APPCODE "+appCode)
 
-	appCodehttp.Post(url)
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	checkErr(err)
+	defer resp.Body.Close()
 
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(body))
+	status := resp.StatusCode
+	fmt.Println(status)
 }
-*/
