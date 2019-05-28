@@ -147,8 +147,12 @@ func main() {
 				checkErr(err)
 				rebootTime, err := time.Parse("2006-01-02 15:04:05", reTime)
 				checkErr(err)
-				if timeNow.Sub(rebootTime) < 10 {
-					//callPhone()
+				if timeNow.Sub(rebootTime) < 12 && timeNow.Sub(rebootTime) > 5 {
+					if standbyUnattendedTime() {
+					}
+					callPhone("parame", 18757138227, "")
+				} else {
+
 				}
 
 			}
@@ -194,15 +198,13 @@ func main() {
 	body := `
 		<html>
 		<body>
-		<h3> 异常后台任务：</h3>` + "<div>JOB 信息：" + fmt.Sprintf(" %v ", serverIps) + "<br></br></div>" + "<p>数据库锁信息：" + sql_lock_sqltext +
-		`</p>
-		</body>
-		</html>`
-	fmt.Println("send email")
+		<h3> 异常后台任务：</h3>` + "<div>JOB 信息：" + fmt.Sprintf(" %v ", serverIps) + "<br></br></div></body></html>"
+
+	logger.Println("send email")
 	err = SendToMail(to, subject, body, "html")
 	if err != nil {
-		fmt.Println("Send mail error!")
-		fmt.Println(err)
+		logger.Println("Send mail error!")
+		logger.Println(err)
 	} else {
 		fmt.Println("Send mail success!")
 	}
