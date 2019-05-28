@@ -173,19 +173,26 @@ func standbyUnattendedTime() bool {
 
 func callPhone(param string, phoneNum string, tplId string) {
 
-	var paramStr = "param=%s" +
+	var paramStr = "?param=%s" +
 		"&phone=%s" +
 		"&tpl_id=%s"
 
-	url := "http://yuyin2.market.alicloudapi.com/dx/voice_notice"
+	urlStr := "http://yuyin2.market.alicloudapi.com/dx/voice_notice" + fmt.Sprintf(paramStr, param, phoneNum, tplId)
+	fmt.Println(urlStr)
 	config, err := goconfig.LoadConfigFile("utils.ini")
 	checkErr(err)
 	sec, err := config.GetSection("")
 	checkErr(err)
 	appCode := sec["AppCode"]
-	req, err := http.NewRequest("POST", url, strings.NewReader(fmt.Sprintf(paramStr, param, phoneNum, tplId)))
+	//resp, err := http.PostForm(urlStr, url.Values{"param": {param}, "phone": {phoneNum}, "tpl_id": {tplId}})
+	//jsonStr  := []byte(`{ "param": param, "phone": phoneNum, "tpl_id": tplId }`)
+	req, err := http.NewRequest("POST", urlStr, strings.NewReader(""))
 	checkErr(err)
-	req.Header.Add("Authorization", "APPCODE "+appCode)
+	req.Header.Set("Authorization", " APPCODE "+appCode)
+	//reqText := fmt.Sprintf("%v", req)
+	//fmt.Println(reqText)
+	//body1, _ := ioutil.ReadAll(req.Body)
+	//fmt.Println("body:"+string(body1))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

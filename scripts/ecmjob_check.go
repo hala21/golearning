@@ -7,8 +7,10 @@ import (
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "gopkg.in/goracle.v2"
+	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -25,15 +27,33 @@ var (
 
 func main() {
 	// 获取参数
-	sec, logger := getParameter("dbserver", "数据库服务器", "jobcheck.ini", strings.Split(os.Args[1], "=")[1])
+	sec := GetParameter("dbserver", "数据库服务器", "jobcheck.ini")
 	oracleSid := sec["oracle_sid"]
 	sshPort, _ := strconv.Atoi(sec["server_ssh_port"])
 	mysqlSid := sec["mysql_sid"]
 
+	//日志文件
+	var layoutISO = "2006-01-02"
+	filename := "ecmjob_check__" + strings.Split(os.Args[1], "=")[1]
+	// 保存7天以内的日志文件
+	sysType := runtime.GOOS
+	if sysType == "linux" {
+		exec.Command("find ./logs - name ecmjob_check_*.log -ctime +14 |xargs rm -f ")
+	}
+
+	logfileName := filename + "_" + time.Now().Format(layoutISO) + ".log"
+	f, err := os.OpenFile("logs/"+logfileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()
+	logger := log.New(f, "check：", log.LstdFlags)
+
 	// 打开数据库连接
 	dbOracle, err := sql.Open("goracle", oracleSid)
 	if err != nil {
-		fmt.Println(err)
+		logger.Println(err)
+		callPhone("param", 187571378227, "")
 		return
 	}
 	defer dbOracle.Close()
@@ -67,27 +87,27 @@ func main() {
 	var serverIp, jobName string = "", ""
 	rows_1, err := dbOracle.Query(sql_1)
 	if err != nil {
-		fmt.Println("Error running query")
-		fmt.Println(err)
+		logger.Println("Error running query")
+		logger.Println(err)
 		return
 	}
 	defer rows_1.Close()
 
 	for rows_1.Next() {
-		rows_1.Scan(&serverIp, &jobName)
+		_ = rows_1.Scan(&serverIp, &jobName)
 		theData = append(theData, jobInfo{serverIp, jobName})
 	}
 
 	rows_2, err := dbOracle.Query(sql_2)
 	if err != nil {
-		fmt.Println("Error running query")
-		fmt.Println(err)
+		logger.Println("Error running query")
+		logger.Println(err)
 		return
 	}
 	defer rows_2.Close()
 
 	for rows_2.Next() {
-		rows_2.Scan(&serverIp, &jobName)
+		_ = rows_2.Scan(&serverIp, &jobName)
 		theData = append(theData, jobInfo{serverIp, jobName})
 	}
 
@@ -109,7 +129,6 @@ func main() {
 	defer cancel()
 
 	// 检查数据库情况
-	var sql_lock_txt string = " "
 	if len(serverIps) > 0 {
 		// 假如有异常的任务，需要和之前的重启记录比对，比对是都是相隔10分钟左右，说明重启还未解决之前的问题，
 		// 假如上次重启再10分钟前，且在节假日，需要 call电话
@@ -136,32 +155,18 @@ func main() {
 
 		}
 
-		//检查是否有数据库的情况，假如有锁，读取任意一行数据，获得SQL文件，假如锁很多，很那收集到所有的信息，所以选取其中一条所情况
-		rows_lock := dbOracle.QueryRowContext(ctxt, sql_lock_check)
-		var sidString = ""
-		rows_lock.Scan(&sidString)
-		fmt.Println(" oracle sql id: " + sidString)
-
-		//假如有锁的情况，根据SQD 获取SQL文本信息。
-		sidString = "ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )" // 测试语句
-		if len(sidString) > 1 {
-			sid := strings.Split(strings.Split(sidString, " ")[4], "=")[2]
-			lock_sql := dbOracle.QueryRowContext(ctxt, sql_lock_sqltext, sid)
-			var userName, sidStr, status string
-			lock_sql.Scan(&userName, &sidStr, &status, &sql_lock_txt)
-			fmt.Println(sql_lock_txt)
-		}
-
 		// SSH 执行重启脚本
 		for _, ip := range serverIps {
 			var buf bytes.Buffer
 			//exec.Command("ssh -p "+string(server_ssh_port)+" " +ip+" sh /webapp/scripts/restart.sh")
-			cmdString := "ssh -p " + string(sshPort) + " " + ip + " tail -30 /webapp/tomcat1/logs/catalina.out ;sh /webapp/scripts/restart.sh"
-			cmd := exec.CommandContext(ctxt, cmdString)
+			//cmdString := "ssh -p " + string(sshPort) + " " + ip + " tail -30 /webapp/tomcat1/logs/catalina.out ;sh /webapp/scripts/restart.sh"
+			cmd := exec.CommandContext(ctxt, "ssh", "-p", string(sshPort), "ip", "tail -30 /webapp/tomcat1/logs/catalina.out ;sh /root/restart.sh")
 			cmd.Stdout = &buf
 			cmd.Stderr = &buf
-			cmd.Start()
-			cmd.Wait()
+			err := cmd.Start()
+			checkErr(err)
+			err = cmd.Wait()
+			checkErr(err)
 			fmt.Println(buf.Bytes())
 			logger.Println(buf.Bytes())
 
