@@ -52,7 +52,7 @@ func main() {
     from v$lock l1, v$session s1, v$lock l2, v$session s2
     where s1.sid = l1.sid   and s2.sid = l2.sid   and l1.BLOCK = 1   and l2.request > 0   and l1.id1 = l2.id1   and l2.id2 = l2.id2
     `
-	sql_lock_sqltext := `select s.username ||' ' || s.sid ||' ' ||  s.status ||' ' || t.sql_text from v$session s, v$sqltext_with_newlines t
+	sql_lock_sqltext := `select t.sql_text from v$session s, v$sqltext_with_newlines t
 	where DECODE (s.sql_address, '00', s.prev_sql_addr, s.sql_address) = t.address 	and DECODE (s.sql_hash_value, 0, s.prev_hash_value, s.sql_hash_value) = t.hash_value
 	and s.sid = :1 order by t.piece `
 	//killSql := "alter system kill session ':1'"
@@ -83,7 +83,7 @@ func main() {
 	logRec.Println(messages)
 
 	// 测试语句
-	// messages = []string{"ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )", "ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )"}
+	//messages = []string{"ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )", "ECMDTA dcjob1asp02 ( SID=8345 serial#=33553 )  is blocking ECMDTA dcjob1asp11 ( SID=50 )"}
 
 	// jobsSidOrigin为了获取锁语句的sql文本；jobsServerOrigin 目的是去重启tomcat；sidSerialOrigin目的是killsql语句
 	var jobsServerOrigin, sidSerialOrigin []string
@@ -117,6 +117,7 @@ func main() {
 
 	// 收集lock sql 语句
 	var lockSqlTexts []string
+	//sidSerials = []string{"9878"}
 	for _, sqlSid := range sidSerials {
 		sid := strings.Split(sqlSid, ",")[0]
 		lockSqlText := ""
@@ -126,27 +127,30 @@ func main() {
 			logRec.Printf("查询lock SQL失败： %v", err)
 			fmt.Printf("查询lock SQL失败： %v", err)
 		}
+		var lockSqlTextOne []string
 		if rows.Next() {
 			err := rows.Scan(&lockSqlText)
 			if err != nil {
 				logRec.Printf("读取lock SQL失败： %v", err)
 				fmt.Printf("读取lock SQL失败： %v", err)
 			}
-			lockSqlTexts = append(lockSqlTexts, lockSqlText)
+			lockSqlTextOne = append(lockSqlTextOne, lockSqlText)
 		}
+		lockSqlTextSid := strings.Join(lockSqlTextOne, "\nt")
 
 		//暂时写入日志文件
-		logRec.Println(sid + lockSqlText)
+		logRec.Println(sid + lockSqlTextSid)
+		lockSqlTexts = append(lockSqlTexts, lockSqlTextSid)
 	}
-	fmt.Println(lockSqlTexts)
 
+	//return
 	// kill SQL语句
 	for _, sqlSid := range sidSerials {
 		result, err := dbOracle.Exec("alter system kill session '" + sqlSid + "' immediate")
 		// 测试时检测到ORA-00030时正常现象，因为session不存在的话，会有告警提示。
 		if err != nil {
 			logRec.Println(err)
-			fmt.Printf("执行killSQL失败：%v, %v", result, err)
+			logRec.Printf("执行killSQL失败：%v, %v", result, err)
 		}
 		//暂时写入日志文件
 		logRec.Println("killed sql: " + sqlSid)

@@ -70,15 +70,6 @@ func main() {
      where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30) and c.start_job=1-- and b.mobile_list is not null
      group by c.server_ip,b.job_name;`
 
-	sql_lock_check := `select s1.username ||' ' || s1.machine || 
-    ' ( SID=' || s1.sid ||' serial#='||s1.serial#||  ' )  is blocking ' || s2.username ||' '|| s2.machine || ' ( SID=' || s2.sid || ' ) ' AS blocking_status 
-    from v$lock l1, v$session s1, v$lock l2, v$session s2
-    where s1.sid = l1.sid   and s2.sid = l2.sid   and l1.BLOCK = 1   and l2.request > 0   and l1.id1 = l2.id1   and l2.id2 = l2.id2;
-    `
-	sql_lock_sqltext := `select s.username, s.sid, s.status, t.sql_text from v$session s, v$sqltext_with_newlines t
-	where DECODE (s.sql_address, '00', s.prev_sql_addr, s.sql_address) = t.address 	and DECODE (s.sql_hash_value, 0, s.prev_hash_value, s.sql_hash_value) = t.hash_value
-	and s.sid = :1 order by t.piece `
-
 	// 获取服务器地址，分两种情况，一：服务延迟太多，二：服务预期运行时间比现在晚
 	//sql_1_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
 	//sql_2_test := "select c.server_ip,b.job_name from ecmdta.sy_job_queue a inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid inner join ecmdta.sy_job_server c on c.server_name=b.server_name where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=15 group by c.server_ip,b.job_name"
