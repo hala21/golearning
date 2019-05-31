@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	_ "gopkg.in/goracle.v2"
 	"log"
 	"os"
@@ -75,9 +74,9 @@ func main() {
 	}
 
 	// 没有lock 就返回，结束运行
-	//if len(messages) == 0 {
-	//	return
-	//}
+	if len(messages) == 0 {
+		return
+	}
 
 	// 写入日志文件记录
 	logRec.Println(messages)
@@ -117,10 +116,9 @@ func main() {
 
 	// 收集lock sql 语句
 	var lockSqlTexts []string
-	sidSerials = make([]string, 0)
-	//"5363"9210
-	sidSerials = append(sidSerials, "4977")
-	fmt.Println(sidSerials)
+	// sidSerials = make([]string, 0)
+	//	sidSerials = append(sidSerials, "11275")
+	//	fmt.Println(sidSerials)
 	for _, sqlSid := range sidSerials {
 		sid := strings.Split(sqlSid, ",")[0]
 
@@ -131,8 +129,8 @@ func main() {
 			fmt.Printf("查询lock SQL失败： %v", err)
 		}
 		var lockSqlTextOne []string
-		if rows.Next() {
-			lockSqlText := ""
+		for rows.Next() {
+			var lockSqlText string
 			err := rows.Scan(&lockSqlText)
 			if err != nil {
 				logRec.Printf("读取lock SQL失败： %v", err)
@@ -140,7 +138,7 @@ func main() {
 			}
 			lockSqlTextOne = append(lockSqlTextOne, lockSqlText)
 		}
-		lockSqlTextSid := strings.Join(lockSqlTextOne, "\nt")
+		lockSqlTextSid := strings.Join(lockSqlTextOne, "\t")
 
 		//暂时写入日志文件
 		logRec.Println(sid + lockSqlTextSid)
@@ -171,17 +169,16 @@ func main() {
 	}
 
 	// 发出邮件
-	to := "lizhiyong567@gmail.com"
 	subject := "Oracle 数据库锁"
 	body := `
 		<html>
 		<body>
-		<h3> Oracle 数据库锁：</h3>` + "<div>JOB 信息：" + fmt.Sprintf(" %v ", jobServers) + "<br></br></div>" + "<p>数据库锁信息：" + strings.Join(lockSqlTexts, "\n\t") +
+		<h3> Oracle 数据库有锁：</h3>` + "<div>JOB 服务器地址：" + fmt.Sprintf(" %v ", jobServers) + "<br></br></div>" + "<p>数据库锁信息：" + strings.Join(lockSqlTexts, "\n\t") +
 		`</p>
 		</body>
 		</html>`
 	fmt.Println("send email")
-	err = SendToMail(to, subject, body, "html")
+	err = SendToMail(subject, body, "html")
 	if err != nil {
 		fmt.Println("Send mail error!")
 		fmt.Println(err)

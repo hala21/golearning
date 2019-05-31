@@ -88,7 +88,7 @@ func sshConn(host, user, password string, port int) (*ssh.Client, error) {
 	return sshClient, nil
 }
 
-func SendToMail(to, subject, body, mailType string) error {
+func SendToMail(subject, body, mailType string) error {
 	conf, err := goconfig.LoadConfigFile("utils.ini")
 	sec, err := conf.GetSection("")
 	if err != nil {
@@ -98,6 +98,7 @@ func SendToMail(to, subject, body, mailType string) error {
 	host := sec["smtp_server"]
 	user := sec["smtp_user"]
 	password := sec["smtp_password"]
+	to := sec["mail_to"]
 	hp := strings.Split(host, ":")
 	auth := smtp.PlainAuth("", user, password, hp[0])
 	var contentType string
