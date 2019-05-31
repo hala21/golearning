@@ -64,9 +64,9 @@ func main() {
 			inner join ecmdta.sy_job_server b on b.server_name=a.server_name
 			where a.next_run_date+6/1440 <sysdate and a.enabled=1 `
 
-	sql_2 := ` select c.server_ip,b.job_name  from sy_job_queue a 
-     inner join sy_jobs b on b.job_ukid=a.job_ukid
-     inner join sy_job_server c on c.server_name=b.server_name
+	sql_2 := ` select c.server_ip,b.job_name  from ecmdta.sy_job_queue a 
+     inner join ecmdta.sy_jobs b on b.job_ukid=a.job_ukid
+     inner join ecmdta.sy_job_server c on c.server_name=b.server_name
      where ROUND(TO_NUMBER(sysdate - a.run_time) * 24 * 60)>=nvl(b.over_time_warn,30) and c.start_job=1-- and b.mobile_list is not null
      group by c.server_ip,b.job_name;`
 
@@ -86,7 +86,9 @@ func main() {
 
 	for rows_1.Next() {
 		_ = rows_1.Scan(&serverIp, &jobName)
-		theData = append(theData, jobInfo{serverIp, jobName})
+		if strings.Contains(serverIp, "192.168.1") {
+			theData = append(theData, jobInfo{serverIp, jobName})
+		}
 	}
 
 	rows_2, err := dbOracle.Query(sql_2)

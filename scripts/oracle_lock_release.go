@@ -75,9 +75,9 @@ func main() {
 	}
 
 	// 没有lock 就返回，结束运行
-	if len(messages) == 0 {
-		return
-	}
+	//if len(messages) == 0 {
+	//	return
+	//}
 
 	// 写入日志文件记录
 	logRec.Println(messages)
@@ -117,10 +117,13 @@ func main() {
 
 	// 收集lock sql 语句
 	var lockSqlTexts []string
-	//sidSerials = []string{"9878"}
+	sidSerials = make([]string, 0)
+	//"5363"9210
+	sidSerials = append(sidSerials, "4977")
+	fmt.Println(sidSerials)
 	for _, sqlSid := range sidSerials {
 		sid := strings.Split(sqlSid, ",")[0]
-		lockSqlText := ""
+
 		rows, err := dbOracle.QueryContext(ctxt, sql_lock_sqltext, sid)
 
 		if err != nil {
@@ -129,6 +132,7 @@ func main() {
 		}
 		var lockSqlTextOne []string
 		if rows.Next() {
+			lockSqlText := ""
 			err := rows.Scan(&lockSqlText)
 			if err != nil {
 				logRec.Printf("读取lock SQL失败： %v", err)
